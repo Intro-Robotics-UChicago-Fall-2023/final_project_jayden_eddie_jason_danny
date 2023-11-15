@@ -173,8 +173,8 @@ class FindAndPickupCan:
             x = 0.25
             z = self.calculate_z(self.cx, self.cy, self.distance_in_front)
             angle1, angle2 = self.calculate_angles(x, z)
-            print(angle1, angle2)
-            pickup_angles = [angle1, angle2, 0, 0]
+            print("anles", angle1, angle2)
+            pickup_angles = [0, angle1, angle2 / 4, 0]
             while not self.move_group_arm.go(pickup_angles, wait=True):
                 rospy.logerr("Pick up motion failed at init")
                 rospy.sleep(1)
