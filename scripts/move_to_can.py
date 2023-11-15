@@ -24,13 +24,16 @@ class FindAndPickupCan:
                 self.move_group_gripper = moveit_commander.MoveGroupCommander("gripper")
                 self.image_sub = rospy.Subscriber('camera/rgb/image_raw',
                         Image, self.image_callback)
+                self.bridge = cv_bridge.CvBridge()
                 # subscribe to the lidar scan from the robot
                 self.laser_sub = rospy.Subscriber('/scan', LaserScan, self.laser_callback)
                 self.vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size = 10)
                 self.arm_len_1 = 0.2
                 self.arm_len_2 = 0.274
+                self.cx = None
+                self.cy = None
                 self.can_to_pick = 'sprite'
-
+                self.distance_in_front = float('inf')
                 self.latest_image = None
                 self.new_image_flag = False
         
@@ -38,6 +41,7 @@ class FindAndPickupCan:
             # used to check the distances in front of the robot
             
             num_readings = len(data.ranges)  
+          
 
             
             front_readings_count = int((30.0 / 360.0) * num_readings)
@@ -53,23 +57,26 @@ class FindAndPickupCan:
             else:
                 # calculate the minimum distance in that range, ignoring 'inf' values
                 self.distance_in_front = min(r for r in front_ranges if r != float('inf'))
-                print(self.distance_in_front)
+         
+                
                    
         
         def get_lidar_distance(self):
             return self.distance_in_front
                 
         def image_callback(self, msg):
+            
             self.image = self.bridge.imgmsg_to_cv2(msg,desired_encoding='bgr8')
+            hsv = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
             self.image_width = self.image.shape[1]
             self.detected_object_center = self.detect_can(self.image, self.can_to_pick)
             color_ranges = {
                 'dc': (np.array([145, 75, 75]), np.array([175, 255, 255])),
                 'coke': (np.array([145, 75, 75]), np.array([175, 255, 255])),
-                'sprite': (np.array([145, 75, 75]), np.array([175, 255, 255]))
+                'sprite': (np.array([55, 40, 180]), np.array([110, 100, 230]))
             }
-            if self.color_to_pick in color_ranges:
-                    lower_color, upper_color = color_ranges[self.color_to_pick]
+            if self.can_to_pick in color_ranges:
+                    lower_color, upper_color = color_ranges[self.can_to_pick]
                     mask = cv2.inRange(hsv, lower_color, upper_color)
                     M = cv2.moments(mask)
                     if M['m00'] > 0:
@@ -83,10 +90,9 @@ class FindAndPickupCan:
            
             r = math.sqrt(x**2 + z**2)
 
-            
             cos_q2 = (r ** 2 - self.arm_len_1**2 - self.arm_len_2**2) / (2 * self.arm_len_1 * self.arm_len_2)
+            
             q2 = math.acos(cos_q2)
-
         
             q1 = math.atan2(z, x) - math.atan2(self.arm_len_2 * math.sin(q2), self.arm_len_1 + self.arm_len_2 * math.cos(q2))
 
@@ -107,56 +113,52 @@ class FindAndPickupCan:
             color_ranges = {
                     'dc': (np.array([145, 75, 75]), np.array([175, 255, 255])),
                     'coke': (np.array([25, 128, 50]), np.array([90, 179, 255])),
-                    'sprite': (np.array([55, 40, 180]), np.array([125, 120, 230]))
+                    'sprite': (np.array([55, 40, 180]), np.array([110, 100, 230]))
                 }
             target_center = None
             
-            if color in color_ranges:
-                    lower_color, upper_color = color_ranges[color]
+            if can in color_ranges:
+                    lower_color, upper_color = color_ranges[can]
                     mask = cv2.inRange(hsv, lower_color, upper_color)
                     M = cv2.moments(mask)
                     if M['m00'] > 0:
                         self.cx = int(M['m10']/M['m00'])
                         self.cy = int(M['m01']/M['m00'])
-                        target_center = (cx, cy)
-                        cv2.circle(self.image, (cx, cy), 20, (0,0,255), -1)
+                        target_center = (self.cx, self.cy)
+                        cv2.circle(self.image, (self.cx, self.cy), 20, (0,0,255), -1)
                         
             return target_center
         
         def rotate_and_find_object(self):
-            rate = rospy.Rate(10)  
+            print("entered rotate function")
+            rate = rospy.Rate(10)
             while self.distance_in_front >= 0.25:
-                
-                if self.object_centered and self.distance_in_front <= 0.25:
-                    self.vel_pub.publish(Twist())
-                    rospy.loginfo("Object approached, stopping")
-                    break  # Exit the loop
-
-                # if we detect the object, center and move towards it
-                elif self.detected_object_center:
+                # If we detect the object, center and move towards it
+                if self.detected_object_center:
                     err = self.detected_object_center[0] - self.image_width / 2
-                    angular_speed = -float(err) / 1000  
+                    angular_speed = -float(err) / 1000
 
-                    # prop control
-                    if abs(err) > self.image_width * 0.05:  
-                        linear_speed = 0  
+                    # Proportional control
+                    if abs(err) > self.image_width * 0.05:
+                        linear_speed = 0
                     else:
-                        
                         linear_speed = 0.1
 
-                    
                     vel_msg = Twist()
                     vel_msg.angular.z = angular_speed
                     vel_msg.linear.x = linear_speed
                     self.vel_pub.publish(vel_msg)
-
                 else:
-                    # search for object
+                    # Search for object
                     vel_msg = Twist()
-                    vel_msg.angular.z = 0.1 
+                    vel_msg.angular.z = 0.1
                     self.vel_pub.publish(vel_msg)
 
-                rate.sleep()  
+                rate.sleep()
+
+            # This block will be executed when the robot is within 0.25 meters of the object
+            self.vel_pub.publish(Twist())
+            rospy.loginfo("Object approached, stopping")
 
             self.vel_pub.publish(Twist())
             rospy.loginfo("Exiting rotate_and_find_object")
@@ -171,6 +173,7 @@ class FindAndPickupCan:
             x = 0.25
             z = self.calculate_z(self.cx, self.cy, self.distance_in_front)
             angle1, angle2 = self.calculate_angles(x, z)
+            print(angle1, angle2)
             pickup_angles = [angle1, angle2, 0, 0]
             while not self.move_group_arm.go(pickup_angles, wait=True):
                 rospy.logerr("Pick up motion failed at init")
@@ -189,8 +192,20 @@ class FindAndPickupCan:
             self.move_group_gripper.stop()
             rospy.sleep(1)
         
+        def execute_action(self):
+            rospy.loginfo("looking for can")
+            rospy.sleep(5)
+            self.rotate_and_find_object()
+            rospy.loginfo("pickup can")
+            self.pick_up()
+        
+        def start_action_sequence(self):
+            # This method will start the action sequence in a new thread
+            action_thread = threading.Thread(target=self.execute_action)
+            action_thread.start()
+        
         def run(self):
-            
+            self.start_action_sequence()
             rate = rospy.Rate(30)  # Set an appropriate rate (e.g., 30Hz)
             
             
