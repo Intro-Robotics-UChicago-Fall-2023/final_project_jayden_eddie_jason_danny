@@ -41,9 +41,6 @@ class FindAndPickupCan:
             # used to check the distances in front of the robot
             
             num_readings = len(data.ranges)  
-          
-
-            
             front_readings_count = int((30.0 / 360.0) * num_readings)
             # get the indices for the middle of the data.ranges array
             middle_index = num_readings // 2
@@ -65,24 +62,50 @@ class FindAndPickupCan:
             return self.distance_in_front
                 
         def image_callback(self, msg):
-            
             self.image = self.bridge.imgmsg_to_cv2(msg,desired_encoding='bgr8')
             hsv = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
             self.image_width = self.image.shape[1]
-            self.detected_object_center = self.detect_can(self.image, self.can_to_pick)
+            self.image_height = self.image.shape[0]
+            
+            #self.detected_object_center = self.detect_can(self.image, self.can_to_pick)
+            
+            # color ranges for the different cans (in progress, only sprite is accurate atm)
             color_ranges = {
                 'dc': (np.array([145, 75, 75]), np.array([175, 255, 255])),
                 'coke': (np.array([145, 75, 75]), np.array([175, 255, 255])),
                 'sprite': (np.array([55, 40, 180]), np.array([110, 100, 230]))
             }
+                
             if self.can_to_pick in color_ranges:
                     lower_color, upper_color = color_ranges[self.can_to_pick]
                     mask = cv2.inRange(hsv, lower_color, upper_color)
-                    M = cv2.moments(mask)
-                    if M['m00'] > 0:
-                        cx = int(M['m10']/M['m00'])
-                        cy = int(M['m01']/M['m00'])
-                        cv2.circle(self.image, (cx, cy), 20, (0,0,255), -1)
+                    # Find contours of the can
+                    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                    # If contours are found, assume the largest one is the can
+                    if contours:
+                            c = max(contours, key=cv2.contourArea)
+                            x, y, w, h = cv2.boundingRect(c)
+                            
+                            # Draw a rectangle around the detected can
+                            cv2.rectangle(self.image, (x, y), (x+w, y+h), (0, 255, 0), 2)
+                            
+                            # Calculate the Z value (vertical distance from the camera to the can)
+                            KNOWN_CAN_HEIGHT = 0.12  # The actual height of a standard soda can in meters
+                            CAMERA_VERTICAL_FOV = math.radians(48.8)  # Convert degrees to radians if necessary
+                            
+                            # Calculate Z using the height of the can in the image
+                            z = self.calculate_z_from_height(h, KNOWN_CAN_HEIGHT, CAMERA_VERTICAL_FOV, self.image_height)
+                            if z is not None:
+                                print("Calculated Z (vertical distance to can):", z)
+                            else:
+                                print("Can pixel height is zero, Z cannot be calculated.")
+                            
+                            # Update the detected object center
+                            self.detected_object_center = (x + w // 2, y + h // 2)
+                            
+                    else:
+                            print("No can detected.")
+                
             self.latest_image = self.image
             self.new_image_flag = True
         
@@ -133,6 +156,8 @@ class FindAndPickupCan:
             print("entered rotate function")
             rate = rospy.Rate(10)
             while self.distance_in_front >= 0.25:
+                if self.distance_in_front <= 0.25:
+                        break
                 # If we detect the object, center and move towards it
                 if self.detected_object_center:
                     err = self.detected_object_center[0] - self.image_width / 2
@@ -207,8 +232,6 @@ class FindAndPickupCan:
         def run(self):
             self.start_action_sequence()
             rate = rospy.Rate(30)  # Set an appropriate rate (e.g., 30Hz)
-            
-            
             while not rospy.is_shutdown():
                 # Always check for new images and update the display
                 if self.new_image_flag:
