@@ -28,7 +28,7 @@ class FindAndPickupCan:
                 # subscribe to the lidar scan from the robot
                 self.laser_sub = rospy.Subscriber('/scan', LaserScan, self.laser_callback)
                 self.vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size = 10)
-                self.arm_len_1 = 0.2
+                self.arm_len_1 = 0.21
                 self.arm_len_2 = 0.274
                 self.cx = None
                 self.cy = None
@@ -36,6 +36,7 @@ class FindAndPickupCan:
                 self.distance_in_front = float('inf')
                 self.latest_image = None
                 self.new_image_flag = False
+                self.z = None
         
         def laser_callback(self, data):
             # used to check the distances in front of the robot
@@ -73,7 +74,7 @@ class FindAndPickupCan:
             color_ranges = {
                 'dc': (np.array([145, 75, 75]), np.array([175, 255, 255])),
                 'coke': (np.array([145, 75, 75]), np.array([175, 255, 255])),
-                'sprite': (np.array([55, 40, 180]), np.array([110, 100, 230]))
+                'sprite': (np.array([35, 100, 100]), np.array([85, 200, 230]))
             }
                 
             if self.can_to_pick in color_ranges:
@@ -93,42 +94,62 @@ class FindAndPickupCan:
                             KNOWN_CAN_HEIGHT = 0.12  # The actual height of a standard soda can in meters
                             CAMERA_VERTICAL_FOV = math.radians(48.8)  # Convert degrees to radians if necessary
                             
-                            # Calculate Z using the height of the can in the image
-                            z = self.calculate_z_from_height(h, KNOWN_CAN_HEIGHT, CAMERA_VERTICAL_FOV, self.image_height)
-                            if z is not None:
-                                print("Calculated Z (vertical distance to can):", z)
-                            else:
-                                print("Can pixel height is zero, Z cannot be calculated.")
+                            if not self.z:# Calculate Z using the height of the can in the image
+                                self.z = -1 * self.calculate_vertical_offset(y + h // 2, self.image_height, CAMERA_VERTICAL_FOV, self.distance_in_front)
+                                print("z = ", self.z)
+                            if self.z is not None:
+                                self.z = self.calculate_vertical_offset(y + h // 2, self.image_height, CAMERA_VERTICAL_FOV, self.distance_in_front)
+                                print("Calculated Z (vertical distance to can):", self.z)
+                            #else:
+                                #print("Can pixel height is zero, Z cannot be calculated.")
                             
                             # Update the detected object center
                             self.detected_object_center = (x + w // 2, y + h // 2)
                             
-                    else:
-                            print("No can detected.")
+                    #else:
+                            #print("No can detected.")
                 
             self.latest_image = self.image
             self.new_image_flag = True
         
         def calculate_angles(self, x, z):
-           
+            print("calculating with x:", x, "z: ", z)
             r = math.sqrt(x**2 + z**2)
 
             cos_q2 = (r ** 2 - self.arm_len_1**2 - self.arm_len_2**2) / (2 * self.arm_len_1 * self.arm_len_2)
-            
+            print("cos_q2: ", cos_q2)
+            if cos_q2 > 1:
+                cos_q2 = 1
             q2 = math.acos(cos_q2)
+            
         
             q1 = math.atan2(z, x) - math.atan2(self.arm_len_2 * math.sin(q2), self.arm_len_1 + self.arm_len_2 * math.cos(q2))
 
             return q1, q2
 
         
-        def calculate_z(self, cx, cy, lidar_distance):
-            image_height = self.image.shape[0]
-            camera_vertical_fov = math.radians(48.8) 
-            angle_from_center = ((cy - (image_height / 2)) / (image_height / 2)) * (camera_vertical_fov / 2)
-            z = self.distance_in_front * math.tan(angle_from_center)
+        def calculate_vertical_offset(self, can_center_y, image_height, camera_vertical_fov, distance_to_can):
+            """
+            Calculate the vertical offset of the can relative to the camera.
 
-            return z
+            :param can_center_y: The y-coordinate of the center of the can in the image frame.
+            :param image_height: The height of the image in pixels.
+            :param camera_vertical_fov: The vertical field of view of the camera in radians.
+            :param distance_to_can: The distance from the camera to the can (horizontally).
+            :return: The vertical offset from the camera to the can in meters.
+            """
+            # Calculate the proportion of the image height from the center to the can's center
+            proportion_from_center = (can_center_y - (image_height / 2)) / (image_height / 2)
+
+            # Calculate the angle from the center to the can's center
+            angle_from_center = proportion_from_center * (camera_vertical_fov / 2)
+
+            # Calculate the vertical offset using the angle and the distance to the can
+            vertical_offset = distance_to_can * math.tan(angle_from_center)
+
+            return vertical_offset
+
+
 
         
         def detect_can(self, image, can):
@@ -155,8 +176,8 @@ class FindAndPickupCan:
         def rotate_and_find_object(self):
             print("entered rotate function")
             rate = rospy.Rate(10)
-            while self.distance_in_front >= 0.25:
-                if self.distance_in_front <= 0.25:
+            while self.distance_in_front >= 0.18:
+                if self.distance_in_front <= 0.18:
                         break
                 # If we detect the object, center and move towards it
                 if self.detected_object_center:
@@ -181,7 +202,7 @@ class FindAndPickupCan:
 
                 rate.sleep()
 
-            # This block will be executed when the robot is within 0.25 meters of the object
+           
             self.vel_pub.publish(Twist())
             rospy.loginfo("Object approached, stopping")
 
@@ -195,12 +216,13 @@ class FindAndPickupCan:
             rospy.sleep(1)
             self.move_group_gripper.stop()
             rospy.sleep(1)
-            x = 0.25
-            z = self.calculate_z(self.cx, self.cy, self.distance_in_front)
-            angle1, angle2 = self.calculate_angles(x, z)
-            print("anles", angle1, angle2)
-            pickup_angles = [0, angle1, angle2 / 4, 0]
+            x = 0.3
+            angle1, angle2 = self.calculate_angles(x, self.z)
+            print("angles", angle1, angle2)
+            pickup_angles = [0, angle1, angle2, 0]
+
             while not self.move_group_arm.go(pickup_angles, wait=True):
+            
                 rospy.logerr("Pick up motion failed at init")
                 rospy.sleep(1)
                 
