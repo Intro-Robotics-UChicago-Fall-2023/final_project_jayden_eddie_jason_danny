@@ -25,11 +25,12 @@ class FindAndPickupCan:
                 self.image_sub = rospy.Subscriber('camera/rgb/image_raw',
                         Image, self.image_callback)
                 self.bridge = cv_bridge.CvBridge()
+                self.aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_50)
                 # subscribe to the lidar scan from the robot
                 self.laser_sub = rospy.Subscriber('/scan', LaserScan, self.laser_callback)
                 self.vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size = 10)
-                self.arm_len_1 = 0.21
-                self.arm_len_2 = 0.274
+                self.arm_len_1 = 0.313
+                self.arm_len_2 = 0.051
                 self.cx = None
                 self.cy = None
                 self.can_to_pick = 'sprite'
@@ -55,6 +56,7 @@ class FindAndPickupCan:
             else:
                 # calculate the minimum distance in that range, ignoring 'inf' values
                 self.distance_in_front = min(r for r in front_ranges if r != float('inf'))
+                #print(self.distance_in_front)
          
                 
                    
@@ -67,7 +69,10 @@ class FindAndPickupCan:
             hsv = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
             self.image_width = self.image.shape[1]
             self.image_height = self.image.shape[0]
-            
+            grayscale_image = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
+            self.corners, self.ids, self.rejected_points = cv2.aruco.detectMarkers(grayscale_image, self.aruco_dict)
+            if self.ids is not None:  
+                        cv2.aruco.drawDetectedMarkers(self.image, self.corners, self.ids)
             #self.detected_object_center = self.detect_can(self.image, self.can_to_pick)
             
             # color ranges for the different cans (in progress, only sprite is accurate atm)
@@ -94,12 +99,13 @@ class FindAndPickupCan:
                             KNOWN_CAN_HEIGHT = 0.12  # The actual height of a standard soda can in meters
                             CAMERA_VERTICAL_FOV = math.radians(48.8)  # Convert degrees to radians if necessary
                             
-                            if not self.z:# Calculate Z using the height of the can in the image
-                                self.z = -1 * self.calculate_vertical_offset(y + h // 2, self.image_height, CAMERA_VERTICAL_FOV, self.distance_in_front)
+                            if not self.z and self.distance_in_front < 0.5:# Calculate Z using the height of the can in the image
+                               
+                                self.z = self.calculate_vertical_offset(y + h // 2, self.image_height, CAMERA_VERTICAL_FOV, self.distance_in_front) - 0.04
                                 print("z = ", self.z)
-                            if self.z is not None:
-                                self.z = self.calculate_vertical_offset(y + h // 2, self.image_height, CAMERA_VERTICAL_FOV, self.distance_in_front)
-                                print("Calculated Z (vertical distance to can):", self.z)
+                            #if self.z:
+                                #print(self.calculate_vertical_offset(y + h // 2, self.image_height, CAMERA_VERTICAL_FOV, self.distance_in_front))
+                        
                             #else:
                                 #print("Can pixel height is zero, Z cannot be calculated.")
                             
@@ -147,7 +153,7 @@ class FindAndPickupCan:
             # Calculate the vertical offset using the angle and the distance to the can
             vertical_offset = distance_to_can * math.tan(angle_from_center)
 
-            return vertical_offset
+            return -1 * vertical_offset
 
 
 
@@ -216,8 +222,10 @@ class FindAndPickupCan:
             rospy.sleep(1)
             self.move_group_gripper.stop()
             rospy.sleep(1)
-            x = 0.3
+            x = 0.31
             angle1, angle2 = self.calculate_angles(x, self.z)
+            angle1 = -1 * angle1
+            angle2 = angle2 - (math.pi / 2)
             print("angles", angle1, angle2)
             pickup_angles = [0, angle1, angle2, 0]
 
@@ -238,6 +246,88 @@ class FindAndPickupCan:
             rospy.sleep(1)
             self.move_group_gripper.stop()
             rospy.sleep(1)
+            carry_joint_values = [0, -0.819, -0.258, 0.098]
+
+            # Move the arm to the carry position
+            rospy.sleep(1)
+            while not self.move_group_arm.go(carry_joint_values, wait=True):
+                rospy.logerr("motion failed at pickup")
+                rospy.sleep(1)
+            rospy.sleep(5)
+            self.move_group_arm.stop()
+        
+
+        def back_up(self):
+            vel_msg = Twist()
+            
+            vel_msg.linear.x = -0.2
+            self.vel_pub.publish(vel_msg)
+            rospy.sleep(4)
+            self.vel_pub.publish(Twist())
+        
+        def look_for_tag(self, target_id):
+            rate = rospy.Rate(5)
+            if self.ids is not None:
+                ids_flattened = self.ids.flatten()
+            while self.ids is None or target_id not in self.ids.flatten():
+                
+                vel_msg = Twist()
+                vel_msg.angular.z = 0.2
+                self.vel_pub.publish(vel_msg)
+                rate.sleep()
+                if self.ids is not None:
+                    ids_flattened = self.ids.flatten()
+                    if target_id in ids_flattened:
+                        break
+            self.vel_pub.publish(Twist())
+            rospy.loginfo("tag found ")
+
+            
+                
+            if target_id in ids_flattened:
+                rospy.loginfo("AR tag found, moving to it")
+                index = np.where(ids_flattened == target_id)[0][0]
+                    
+                    
+                while self.distance_in_front > 0.3:
+                     # calculate the position of the AR tag
+                    target_corner = self.corners[index][0]
+                    center_x = int((target_corner[0][0] + target_corner[2][0]) / 2)
+                    image_center_x = self.image.shape[1] / 2
+                    err_x = center_x - image_center_x
+                        
+                    # prop control
+                    vel_msg = Twist()
+                    vel_msg.angular.z = -float(err_x) / 1000 
+                    vel_msg.linear.x = 0.1  
+
+                    self.vel_pub.publish(vel_msg)
+                        
+                print("reached goal distance")
+
+                    
+                self.vel_pub.publish(Twist())
+            
+        
+        def drop_can_end_sequence(self):
+            gripper_joint_open = [0.01, 0.01]
+            rospy.sleep(5)
+            self.move_group_gripper.go(gripper_joint_open, wait=True)
+            rospy.sleep(1)
+            self.move_group_gripper.stop()
+            rospy.sleep(1)
+            home_joint_values = [0, -1, 0.325, 0.7]
+            while not self.move_group_arm.go(home_joint_values, wait=True):
+                rospy.logerr("Pick up motion failed at home pose")
+                rospy.sleep(1)
+
+
+        
+
+
+
+
+        
         
         def execute_action(self):
             rospy.loginfo("looking for can")
@@ -245,6 +335,11 @@ class FindAndPickupCan:
             self.rotate_and_find_object()
             rospy.loginfo("pickup can")
             self.pick_up()
+            rospy.loginfo("backing up")
+            self.back_up()
+            rospy.loginfo("looking for tag")
+            self.look_for_tag(3)
+            self.drop_can_end_sequence()
         
         def start_action_sequence(self):
             # This method will start the action sequence in a new thread
