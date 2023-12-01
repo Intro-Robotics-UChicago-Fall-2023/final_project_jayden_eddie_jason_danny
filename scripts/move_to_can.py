@@ -20,15 +20,22 @@ import threading
 class FindAndPickupCan:
 
         def __init__(self):
+            # robot arm inits
                 self.move_group_arm = moveit_commander.MoveGroupCommander("arm")
                 self.move_group_gripper = moveit_commander.MoveGroupCommander("gripper")
+
+                # image callback
                 self.image_sub = rospy.Subscriber('camera/rgb/image_raw',
                         Image, self.image_callback)
                 self.bridge = cv_bridge.CvBridge()
+                # for ar tags
                 self.aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_50)
                 # subscribe to the lidar scan from the robot
                 self.laser_sub = rospy.Subscriber('/scan', LaserScan, self.laser_callback)
+                # vel subscriber
                 self.vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size = 10)
+                # relevant variables, some of these will need to be reset when the robotn begins
+                # a new action sequence
                 self.arm_len_1 = 0.313
                 self.arm_len_2 = 0.051
                 self.cx = None
@@ -38,6 +45,7 @@ class FindAndPickupCan:
                 self.latest_image = None
                 self.new_image_flag = False
                 self.z = None
+                self.detected_object_center = None
         
         def laser_callback(self, data):
             # used to check the distances in front of the robot
@@ -59,8 +67,6 @@ class FindAndPickupCan:
                 #print(self.distance_in_front)
          
                 
-                   
-        
         def get_lidar_distance(self):
             return self.distance_in_front
                 
@@ -73,9 +79,9 @@ class FindAndPickupCan:
             self.corners, self.ids, self.rejected_points = cv2.aruco.detectMarkers(grayscale_image, self.aruco_dict)
             if self.ids is not None:  
                         cv2.aruco.drawDetectedMarkers(self.image, self.corners, self.ids)
-            #self.detected_object_center = self.detect_can(self.image, self.can_to_pick)
+    
             
-            # color ranges for the different cans (in progress, only sprite is accurate atm)
+            # color ranges for the different cans (only sprite is accurate atm, but should be able to copy from q-learning)
             color_ranges = {
                 'dc': (np.array([145, 75, 75]), np.array([175, 255, 255])),
                 'coke': (np.array([145, 75, 75]), np.array([175, 255, 255])),
@@ -96,29 +102,23 @@ class FindAndPickupCan:
                             cv2.rectangle(self.image, (x, y), (x+w, y+h), (0, 255, 0), 2)
                             
                             # Calculate the Z value (vertical distance from the camera to the can)
-                            KNOWN_CAN_HEIGHT = 0.12  # The actual height of a standard soda can in meters
-                            CAMERA_VERTICAL_FOV = math.radians(48.8)  # Convert degrees to radians if necessary
+                            KNOWN_CAN_HEIGHT = 0.12
+                            CAMERA_VERTICAL_FOV = math.radians(48.8) 
                             
                             if not self.z and self.distance_in_front < 0.5:# Calculate Z using the height of the can in the image
                                
-                                self.z = self.calculate_vertical_offset(y + h // 2, self.image_height, CAMERA_VERTICAL_FOV, self.distance_in_front) - 0.04
+                                self.z = self.calculate_vertical_offset(y + h // 2, self.image_height, CAMERA_VERTICAL_FOV, self.distance_in_front)
+                                self.z = self.z - self.z * 0.4
                                 print("z = ", self.z)
-                            #if self.z:
-                                #print(self.calculate_vertical_offset(y + h // 2, self.image_height, CAMERA_VERTICAL_FOV, self.distance_in_front))
-                        
-                            #else:
-                                #print("Can pixel height is zero, Z cannot be calculated.")
                             
                             # Update the detected object center
-                            self.detected_object_center = (x + w // 2, y + h // 2)
-                            
-                    #else:
-                            #print("No can detected.")
+                            self.detected_object_center = (x + w // 2, y + h // )
                 
             self.latest_image = self.image
             self.new_image_flag = True
         
         def calculate_angles(self, x, z):
+            """ calculates the angles q1 and q1 given x (lidar) and z (from vertical offset)"""
             print("calculating with x:", x, "z: ", z)
             r = math.sqrt(x**2 + z**2)
 
@@ -135,15 +135,7 @@ class FindAndPickupCan:
 
         
         def calculate_vertical_offset(self, can_center_y, image_height, camera_vertical_fov, distance_to_can):
-            """
-            Calculate the vertical offset of the can relative to the camera.
-
-            :param can_center_y: The y-coordinate of the center of the can in the image frame.
-            :param image_height: The height of the image in pixels.
-            :param camera_vertical_fov: The vertical field of view of the camera in radians.
-            :param distance_to_can: The distance from the camera to the can (horizontally).
-            :return: The vertical offset from the camera to the can in meters.
-            """
+            """ calculates z based on where the can is in the image + distance to the can (held constant))"""
             # Calculate the proportion of the image height from the center to the can's center
             proportion_from_center = (can_center_y - (image_height / 2)) / (image_height / 2)
 
@@ -152,32 +144,9 @@ class FindAndPickupCan:
 
             # Calculate the vertical offset using the angle and the distance to the can
             vertical_offset = distance_to_can * math.tan(angle_from_center)
-
+            # multiply by -1 to convert to robot coord system
             return -1 * vertical_offset
 
-
-
-        
-        def detect_can(self, image, can):
-            hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-            color_ranges = {
-                    'dc': (np.array([145, 75, 75]), np.array([175, 255, 255])),
-                    'coke': (np.array([25, 128, 50]), np.array([90, 179, 255])),
-                    'sprite': (np.array([55, 40, 180]), np.array([110, 100, 230]))
-                }
-            target_center = None
-            
-            if can in color_ranges:
-                    lower_color, upper_color = color_ranges[can]
-                    mask = cv2.inRange(hsv, lower_color, upper_color)
-                    M = cv2.moments(mask)
-                    if M['m00'] > 0:
-                        self.cx = int(M['m10']/M['m00'])
-                        self.cy = int(M['m01']/M['m00'])
-                        target_center = (self.cx, self.cy)
-                        cv2.circle(self.image, (self.cx, self.cy), 20, (0,0,255), -1)
-                        
-            return target_center
         
         def rotate_and_find_object(self):
             print("entered rotate function")
@@ -203,7 +172,7 @@ class FindAndPickupCan:
                 else:
                     # Search for object
                     vel_msg = Twist()
-                    vel_msg.angular.z = 0.1
+                    vel_msg.angular.z = -0.3
                     self.vel_pub.publish(vel_msg)
 
                 rate.sleep()
@@ -224,6 +193,7 @@ class FindAndPickupCan:
             rospy.sleep(1)
             x = 0.31
             angle1, angle2 = self.calculate_angles(x, self.z)
+            # convert to robot coordinate system
             angle1 = -1 * angle1
             angle2 = angle2 - (math.pi / 2)
             print("angles", angle1, angle2)
@@ -239,7 +209,7 @@ class FindAndPickupCan:
               
             gripper_joint_closed = [-0.01, -0.01]  
             # Close the gripper to grasp the object
-            rospy.sleep(10)
+            rospy.sleep(8)
             if not self.move_group_gripper.go(gripper_joint_closed, wait=True):
                 rospy.logerr("Gripper close motion failed at pickup")
                 return False
@@ -323,12 +293,6 @@ class FindAndPickupCan:
 
 
         
-
-
-
-
-        
-        
         def execute_action(self):
             rospy.loginfo("looking for can")
             rospy.sleep(5)
@@ -348,7 +312,7 @@ class FindAndPickupCan:
         
         def run(self):
             self.start_action_sequence()
-            rate = rospy.Rate(30)  # Set an appropriate rate (e.g., 30Hz)
+            rate = rospy.Rate(30) 
             while not rospy.is_shutdown():
                 # Always check for new images and update the display
                 if self.new_image_flag:
