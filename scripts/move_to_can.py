@@ -168,17 +168,20 @@ class FindAndPickupCan:
                     prediction = self.model.predict([landmarks])
                     classID = np.argmax(prediction)
                     className = self.class_names[classID]
-            if first_detection == False and (className != '' or className != 'none'):
-                first_detection = True
-                first_detection_time = rospy.get_time()
-                last_detection = className
-            elif first_detection == True and className == last_detection and rospy.get_time() - first_detection_time > 5:
-                # if the same gesture is detected for 5 seconds, return the gesture
-                return last_detection
-            elif first_detection == True and className != last_detection:
-                first_detection = False
-                first_detection_time = None
-                last_detection = None
+                    print(classID)
+                if first_detection == False and (className is not None and className != 'none'):
+                    print("current gesture: ", className)
+                    first_detection = True
+                    first_detection_time = rospy.get_time()
+                    last_detection = className
+                elif first_detection == True and className == last_detection and rospy.get_time() - first_detection_time > 5:
+                    # if the same gesture is detected for 5 seconds, return the gesture
+                    # )
+                    return last_detection
+                elif first_detection == True and className != last_detection:
+                    first_detection = False
+                    first_detection_time = None
+                    last_detection = None
             # Show the prediction on the frame
             cv2.putText(frame, className, (10, 50), cv2.FONT_HERSHEY_SIMPLEX,
                         1, (0, 0, 255), 2, cv2.LINE_AA)
@@ -310,6 +313,63 @@ class FindAndPickupCan:
         rospy.sleep(4)
         self.vel_pub.publish(Twist())
 
+    def drive_to_gesture(self):
+        # drive toward hand gestur
+        # show the image
+
+        rate = rospy.Rate(10)
+        frame = cv2.flip(self.image, 1)
+        framergb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        # Get hand landmark prediction
+        result = self.hands.process(framergb)
+
+        while result.multi_hand_landmarks is None:
+            x, y = self.image_width, self.image_height
+            # Flip the frame vertically
+            frame = cv2.flip(self.image, 1)
+            framergb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            # Get hand landmark prediction
+            result = self.hands.process(framergb)
+            vel_msg = Twist()
+            vel_msg.angular.z = 0.2
+            self.vel_pub.publish(vel_msg)
+            rate.sleep()
+            result = self.hands.process(framergb)
+        if result.multi_hand_landmarks:
+
+            print("found hand")
+            # put a box around the hand
+            while self.distance_in_front > 0.3:
+                x, y = self.image_width, self.image_height
+                # Flip the frame vertically
+                frame = cv2.flip(self.image, 1)
+                framergb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+                # Get hand landmark prediction
+                result = self.hands.process(framergb)
+                if result.multi_hand_landmarks is None:
+                    continue
+                landmarks = []
+            #    here
+                for handslms in result.multi_hand_landmarks:
+                    for lm in handslms.landmark:
+                        lmx = int(lm.x * x)
+                        lmy = int(lm.y * y)
+                        landmarks.append([lmx, lmy])
+                    self.mp_draw.draw_landmarks(
+                        self.image, handslms, self.mp_hands.HAND_CONNECTIONS)
+                # fidn the center of the hand
+                center = landmarks[9]
+                print("center: ", center)
+                err = center[0] - self.image_width / 2
+                angular_speed = -float(err) / 1000
+                vel_msg = Twist()
+                vel_msg.angular.z = angular_speed
+                vel_msg.linear.x = 0.1
+                self.vel_pub.publish(vel_msg)
+
     def look_for_tag(self, target_id):
         rate = rospy.Rate(5)
         if self.ids is not None:
@@ -370,7 +430,7 @@ class FindAndPickupCan:
         rospy.loginfo("backing up")
         self.back_up()
         rospy.loginfo("looking for tag")
-        self.look_for_tag(3)
+        self.drive_to_gesture()
         self.drop_can_end_sequence()
 
     def start_action_sequence(self):
@@ -394,6 +454,20 @@ class FindAndPickupCan:
 if __name__ == '__main__':
     rospy.init_node('pick_up_object')
     pickup_putdown = FindAndPickupCan()
-    a = pickup_putdown.process_frames()
-    print(a)
-        
+    pickup_putdown.run()
+    # a = pickup_putdown.process_frames()
+    # print(a)
+    # if a == 'none':
+    #     print("no gesture detected")
+    # elif a == 'zero':
+    #     pickup_putdown.can_to_pick = 'sprite'
+    #     pickup_putdown.run()
+
+    # elif a == 'one':
+    #     pickup_putdown.can_to_pick = 'coke'
+    #     pickup_putdown.run()
+    # elif a == 'two':
+    #     pickup_putdown.can_to_pick = 'dc'
+    #     pickup_putdown.run()
+    # else:
+    #     print(a)
