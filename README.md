@@ -5,8 +5,28 @@
 ## The Happy Hydrators
 # Members
 ## Danny Lingen, Jason Starbuck, Eddy Tay, and Jayden Francis
-# Git Repo:
-## https://github.com/Intro-Robotics-UChicago-Fall-2023/drink_fetcher
+
+## Project Description: 
+
+## System Architecture: 
+
+The major components of our project involve gesture recognition and inverse kinematics, which were developed in tandem with common algorithms we have seen elsewhere this quarter like color recognition, proportional control, state management, and callback functions.
+
+We will highlight the major components individually:
+
+### Inverse Kinematics:
+developing the code to allow the robot to recognize and retrieve the can at any arbitrary (reachable) height involved the following steps.
+
+1. Object recognition: We did this through color recognition by using the `image_callback()` function to draw a bounding rectangle around the object with the most contours within the specified color range, we then use this to find the center of the object and position the robot appropriately in `rotate_and_find_object()`.
+2. Vertical and horizontal offset determination: The horizontal offset was calculated by simply using the lidar, by telling the robot to stop at a fixed distance in front of the object (0.18 m). The vertical offset was a bit more complicated. We calculated this value with the `calculate_vertical_offset()` function by calculating the pixel offset between the center of the can and the center of the image, by combining this with our knowledge of the horizontal distance (using LIDAR) and taking the angle from the center using the cameras vertical FOV, we were able to consistantly get accurate readings for our vertical offset (z-value)
+3. Calculating the appropriate angles: This was done using the `calculate_angles()` function, we directly adapted the equations we learned about in class for a 2 DOF joint system
+4. Converting from the robots coordinate system to ours: Before using the angles in `pick_up()`, we convert them from the real world coordinate system to the robots coordinate system by multiplying angle1 by -1 and subtracting 90 degrees (pi/2) from angle2. 
+
+## ROS Node Diagram:
+
+## Execution: Describe how to run your code, e.g., step-by-step instructions on what commands to run in each terminal window to execute your project code.
+
+## Challenges, Future Work, and Takeaways: These should take a similar form and structure to how you approached these in the previous projects (1 paragraph each for the challenges and future work and a few bullet points for takeaways)
 
 ## Motivation (2-3 sentences): Why is your team interested in pursuing this project?
 Our team is driven by the desire to enhance convenience and efficiency in everyday tasks. We recognize the universal appeal of effortlessly accessing your favorite beverages without interrupting leisure time, so we're excited to develop a robotic solution that delivers this comfort right to your couch.
