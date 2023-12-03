@@ -20,8 +20,8 @@ from tensorflow.keras.models import load_model
 
 import threading
 
-class FindAndPickupCan:
 
+class FindAndPickupCan:
     def __init__(self, model_path='mp_hand_gesture', names_path='gesture.names'):
             # robot arm inits
                 self.move_group_arm = moveit_commander.MoveGroupCommander("arm")
@@ -57,6 +57,7 @@ class FindAndPickupCan:
                 self.hands = self.mp_hands.Hands(
                     max_num_hands=1, min_detection_confidence=0.7)
                 self.mp_draw = mp.solutions.drawing_utils
+                self.leaving = False
 
                 # hand recognition
                 self.model = load_model(model_path)
@@ -99,8 +100,8 @@ class FindAndPickupCan:
             
             # color ranges for the different cans (only sprite is accurate atm, but should be able to copy from q-learning)
             color_ranges = {
-                'dc': (np.array([145, 75, 75]), np.array([175, 255, 255])),
                 'coke': (np.array([145, 75, 75]), np.array([175, 255, 255])),
+                'dc': (np.array([55, 40, 180]), np.array([125, 120, 230])),
                 'sprite': (np.array([35, 100, 100]), np.array([85, 200, 230]))
             }
                 
@@ -310,7 +311,7 @@ class FindAndPickupCan:
 
         vel_msg.linear.x = -0.2
         self.vel_pub.publish(vel_msg)
-        rospy.sleep(4)
+        rospy.sleep(2)
         self.vel_pub.publish(Twist())
 
     def drive_to_gesture(self):
@@ -359,16 +360,21 @@ class FindAndPickupCan:
                         lmy = int(lm.y * y)
                         landmarks.append([lmx, lmy])
                     self.mp_draw.draw_landmarks(
-                        self.image, handslms, self.mp_hands.HAND_CONNECTIONS)
+                        self.latest_image, handslms, self.mp_hands.HAND_CONNECTIONS)
                 # fidn the center of the hand
                 center = landmarks[9]
                 print("center: ", center)
                 err = center[0] - self.image_width / 2
-                angular_speed = -float(err) / 1000
+                angular_speed = float(err) / 1000
                 vel_msg = Twist()
                 vel_msg.angular.z = angular_speed
                 vel_msg.linear.x = 0.1
                 self.vel_pub.publish(vel_msg)
+        vel_msg = Twist()
+        vel_msg.linear.x = 0
+        vel_msg.angular.z = 0
+        self.vel_pub.publish(vel_msg)
+
 
     def look_for_tag(self, target_id):
         rate = rospy.Rate(5)
@@ -410,6 +416,8 @@ class FindAndPickupCan:
             self.vel_pub.publish(Twist())
 
     def drop_can_end_sequence(self):
+        self.move_group_arm.go([0, 0.739, -0.69, -0.64], wait=True)
+        rospy.sleep(1)
         gripper_joint_open = [0.01, 0.01]
         rospy.sleep(5)
         self.move_group_gripper.go(gripper_joint_open, wait=True)
@@ -429,9 +437,10 @@ class FindAndPickupCan:
         self.pick_up()
         rospy.loginfo("backing up")
         self.back_up()
-        rospy.loginfo("looking for tag")
+        # rospy.loginfo("looking for tag")
         self.drive_to_gesture()
         self.drop_can_end_sequence()
+        self.leaving = True
 
     def start_action_sequence(self):
         # This method will start the action sequence in a new thread
@@ -447,27 +456,30 @@ class FindAndPickupCan:
                 cv2.imshow("window", self.latest_image)
                 cv2.waitKey(3)
                 self.new_image_flag = False
-
                 rate.sleep()
-
+            if self.leaving:
+                break
+        cv2.destroyAllWindows()
 
 if __name__ == '__main__':
     rospy.init_node('pick_up_object')
-    pickup_putdown = FindAndPickupCan()
-    pickup_putdown.run()
-    # a = pickup_putdown.process_frames()
-    # print(a)
-    # if a == 'none':
-    #     print("no gesture detected")
-    # elif a == 'zero':
-    #     pickup_putdown.can_to_pick = 'sprite'
-    #     pickup_putdown.run()
 
-    # elif a == 'one':
-    #     pickup_putdown.can_to_pick = 'coke'
-    #     pickup_putdown.run()
-    # elif a == 'two':
-    #     pickup_putdown.can_to_pick = 'dc'
-    #     pickup_putdown.run()
-    # else:
-    #     print(a)
+    # pickup_putdown.run()
+    while not rospy.is_shutdown():
+        pickup_putdown = FindAndPickupCan()
+        a = pickup_putdown.process_frames()
+        print(a)
+        if a == 'none':
+            print("no gesture detected")
+        elif a == 'zero':
+            pickup_putdown.can_to_pick = 'sprite'
+            pickup_putdown.run()
+
+        elif a == 'one':
+            pickup_putdown.can_to_pick = 'coke'
+            pickup_putdown.run()
+        elif a == 'two':
+            pickup_putdown.can_to_pick = 'dc'
+            pickup_putdown.run()
+        else:
+            print(a)
