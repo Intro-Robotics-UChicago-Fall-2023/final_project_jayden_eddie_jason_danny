@@ -7,6 +7,7 @@
 ## Danny Lingen, Jason Starbuck, Eddy Tay, and Jayden Francis
 
 ## Project Description: 
+Our team is passionate about enhancing the convenience and efficiency of daily tasks, and we understand the widespread desire for easy access to favorite beverages without disrupting leisure time. To address this, we are excited to develop an innovative robotic solution designed to bring drinks directly to you while you relax on your couch. This solution harnesses the power of Gesture Recognition, Machine Learning (ML)/Training Data Sets, and Inverse Kinematics. Inverse Kinematics enables the robot's arm to reach and grab beverages from any height, ensuring adaptability to different scenarios. Gesture Recognition is incorporated to allow users to indicate their beverage choice and signal where they want it delivered. Additionally, ML and Training Sets are employed to equip the robot with the ability to discern various hand gestures and recognize different beverage types. We aim to create a seamless, user-friendly experience that integrates advanced technology into the comfort of your home.
 
 ## System Architecture: 
 
