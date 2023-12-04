@@ -29,6 +29,21 @@ developing the code to allow the robot to recognize and retrieve the can at any 
 
 ## Challenges, Future Work, and Takeaways: These should take a similar form and structure to how you approached these in the previous projects (1 paragraph each for the challenges and future work and a few bullet points for takeaways)
 
+### Challenges
+
+Developing a robotic system for beverage delivery, leveraging machine learning, gesture recognition, and inverse kinematics, encounters several notable challenges. A primary difficulty lies in harmonizing the software components—comprising machine learning models, gesture recognition algorithms, and inverse kinematics—with physical elements like robotic arms, sensors, and cameras. Ensuring that the physical hardware effectively executes sophisticated software algorithms is essential.
+
+In particular, gesture and recognition posed significant obstacles. Despite achieving high accuracy in controlled settings, these models struggled to perform effectively in real-world environments. This discrepancy might be attributed to factors like inadequate camera resolution. Moreover, converting theoretical arm angles into practical, real-world movements added layers of complexity, presenting further challenges in applying inverse kinematics to the robot's arm. These issues underscore the intricate task of translating advanced computational models into reliable, physical robotic actions.
+
+### Future Work
+
+Future work for the Happy Hydrators includes several avenues that we can explore to enhance the system's performance and utility. The first is to improve the sensor integration. Upgrading the camera or integrating additional sensors could enhance the system's ability to perceive and interact with its environment accurately. This may include using higher-resolution cameras, depth sensors, or LIDAR to improve object recognition and spatial awareness.
+The second is a robust ML Algorithm. Refining the ML algorithms to handle real-world variability better and training the system with a more diverse data set can increase its accuracy and reliability in different lighting conditions and environments. The current design struggles with different lighting conditions. We suspect this may be due to camera quality. The third is to Enhance the Mechanical Design of the robotic arm. Improving the robotic arm's design for more precise and stable movements can help in accurately picking and placing objects, especially in varied and dynamic home environments. The current design may overshoot or undershoot the beverage can.
+
+### Takeaways
+In the takeaway from this project, we discovered a significant gap between our theoretical model and practical implementation, particularly concerning the performance of the machine learning (ML) and training models. While our ML models showed impressive accuracy in controlled environments—achieving 98% accuracy in recognizing hand gestures and 91% in identifying cans—these results did not translate seamlessly into real-world applications with the TurtleBot's camera system. The robot became finicky and often failed to function as expected in practical scenarios. This discrepancy highlighted a crucial disconnect between the code we developed and its integration with the physical machine. It was a valuable lesson in the complexities of translating theoretical accuracy into real-world reliability, emphasizing the need for more robust testing and calibration in diverse, real-life conditions.
+
+
 ## Motivation (2-3 sentences): Why is your team interested in pursuing this project?
 Our team is driven by the desire to enhance convenience and efficiency in everyday tasks. We recognize the universal appeal of effortlessly accessing your favorite beverages without interrupting leisure time, so we're excited to develop a robotic solution that delivers this comfort right to your couch.
 
