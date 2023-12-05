@@ -43,11 +43,12 @@ class FindAndPickupCan:
                 self.arm_len_2 = 0.051
                 self.cx = None
                 self.cy = None
-                self.can_to_pick = 'sprite'
+                self.can_to_pick = None
                 self.distance_in_front = float('inf')
                 self.latest_image = None
                 self.new_image_flag = False
                 self.z = None
+                self.area = None
                 self.detected_object_center = None
                 self.image = None
                 self.image_width = None
@@ -101,7 +102,7 @@ class FindAndPickupCan:
             # color ranges for the different cans (only sprite is accurate atm, but should be able to copy from q-learning)
             color_ranges = {
                 'coke': (np.array([145, 75, 75]), np.array([175, 255, 255])),
-                'dc': (np.array([55, 40, 180]), np.array([125, 120, 230])),
+                'dc': (np.array([10, 70, 110]), np.array([20, 255, 230])),
                 'sprite': (np.array([35, 100, 100]), np.array([85, 200, 230]))
             }
                 
@@ -117,12 +118,13 @@ class FindAndPickupCan:
                             
                             # Draw a rectangle around the detected can
                             cv2.rectangle(self.image, (x, y), (x+w, y+h), (0, 255, 0), 2)
+                            self.area = w * h
                             
                             # Calculate the Z value (vertical distance from the camera to the can)
                             KNOWN_CAN_HEIGHT = 0.12
                             CAMERA_VERTICAL_FOV = math.radians(48.8) 
                             
-                            if not self.z and self.distance_in_front < 0.5:# Calculate Z using the height of the can in the image
+                            if not self.z and self.distance_in_front < 0.5 and self.area > 150:# Calculate Z using the height of the can in the image
                                
                                 self.z = self.calculate_vertical_offset(y + h // 2, self.image_height, CAMERA_VERTICAL_FOV, self.distance_in_front)
                                 self.z = self.z - self.z * 0.4
@@ -236,7 +238,7 @@ class FindAndPickupCan:
             if self.distance_in_front <= 0.18:
                 break
             # If we detect the object, center and move towards it
-            if self.detected_object_center:
+            if self.detected_object_center and self.area > 150:
                 err = self.detected_object_center[0] - self.image_width / 2
                 angular_speed = -float(err) / 1000
 
@@ -251,10 +253,17 @@ class FindAndPickupCan:
                 vel_msg.linear.x = linear_speed
                 self.vel_pub.publish(vel_msg)
             else:
-                # Search for object
-                vel_msg = Twist()
-                vel_msg.angular.z = -0.3
-                self.vel_pub.publish(vel_msg)
+                # Modify this part to check the specific distance range
+                if 0.18 < self.distance_in_front <= 0.35:
+                    # Move straight
+                    vel_msg = Twist()
+                    vel_msg.linear.x = 0.1
+                    self.vel_pub.publish(vel_msg)
+                else:
+                    # Rotate
+                    vel_msg = Twist()
+                    vel_msg.angular.z = -0.3
+                    self.vel_pub.publish(vel_msg)
 
             rate.sleep()
 
@@ -365,10 +374,10 @@ class FindAndPickupCan:
                 center = landmarks[9]
                 print("center: ", center)
                 err = center[0] - self.image_width / 2
-                angular_speed = float(err) / 1000
+                angular_speed = float(err) / 500
                 vel_msg = Twist()
                 vel_msg.angular.z = angular_speed
-                vel_msg.linear.x = 0.1
+                vel_msg.linear.x = 0.2
                 self.vel_pub.publish(vel_msg)
         vel_msg = Twist()
         vel_msg.linear.x = 0
@@ -423,11 +432,11 @@ class FindAndPickupCan:
         self.move_group_gripper.go(gripper_joint_open, wait=True)
         rospy.sleep(1)
         self.move_group_gripper.stop()
-        rospy.sleep(1)
+        rospy.sleep(3)
         home_joint_values = [0, -1, 0.325, 0.7]
         while not self.move_group_arm.go(home_joint_values, wait=True):
             rospy.logerr("Pick up motion failed at home pose")
-            rospy.sleep(1)
+            rospy.sleep(5)
 
     def execute_action(self):
         rospy.loginfo("looking for can")
