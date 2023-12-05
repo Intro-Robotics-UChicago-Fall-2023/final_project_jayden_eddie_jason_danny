@@ -27,13 +27,16 @@ developing the code to allow the robot to recognize and retrieve the can at any 
 Devloping the codea allows the robot to reconfinize the gesture which then corespsonds to the following can. 
 
 1. To traint his model we used the following data set which can be found here https://www.kaggle.com/datasets/gti-upm/leapgestrecog/ and other image sthat where taken on the turtlebots sub optimal camera.
-2. From there to improve accurncy we included the mediapipe frame work to detect the points of the hand and overlay the cordiantes on the existing data set. This allowed us to have a higher accuracy with the bad camera that is on turtle bot.
-3. Once these are aded the image is compressed into 150 by 150 and pushed into the model for 100 epochs wirh batcdh sizes of 256.
-4. Upon completing training we save this model to be lodaded onto the bot.
+2. From there to improve accurncy we included the media pipe frame work to detect the points of the hand and overlay the cordiantes on the existing data set. This allowed us to have a higher accuracy with the bad camera that is on turtle bot.
+3. Once these are aded the image is compressed into 150 by 150 and pushed into the model for 100 epochs with batcdh sizes of 256.
+4. Upon completing training we save this model to be loaded onto the bot.
 
-# Model on the robot 
+#### Model on the robot 
 
-1. 
+1. First we load the model at the being of booting up and the associated class names.
+2. After this is complete we can begin the preprocessing of images to make sure that they are similar to the data that we input to the training model.
+3. To do this we add structural detection to the image convert it to black and white and then feed this into the model.
+4. The model then outputs the confidence percentages of all of the classes. From this, we take the one with the highest percentage and return that int which is then converted and to the corsponding
 
 ## ROS Node Diagram:
 <img width="744" alt="Screenshot 2023-12-04 at 9 20 43 PM" src="https://github.com/Intro-Robotics-UChicago-Fall-2023/final_project_jayden_eddie_jason_danny/assets/102828818/c4869901-b814-46f5-9335-31e91b4459b5">
