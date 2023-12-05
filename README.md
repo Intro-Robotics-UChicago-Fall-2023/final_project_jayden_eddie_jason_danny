@@ -24,6 +24,8 @@ developing the code to allow the robot to recognize and retrieve the can at any 
 4. Converting from the robots coordinate system to ours: Before using the angles in `pick_up()`, we convert them from the real world coordinate system to the robots coordinate system by multiplying angle1 by -1 and subtracting 90 degrees (pi/2) from angle2. 
 
 ## ROS Node Diagram:
+<img width="744" alt="Screenshot 2023-12-04 at 9 20 43 PM" src="https://github.com/Intro-Robotics-UChicago-Fall-2023/final_project_jayden_eddie_jason_danny/assets/102828818/c4869901-b814-46f5-9335-31e91b4459b5">
+
 
 ## Execution: Describe how to run your code, e.g., step-by-step instructions on what commands to run in each terminal window to execute your project code.
 
