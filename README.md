@@ -21,7 +21,19 @@ developing the code to allow the robot to recognize and retrieve the can at any 
 1. Object recognition: We did this through color recognition by using the `image_callback()` function to draw a bounding rectangle around the object with the most contours within the specified color range, we then use this to find the center of the object and position the robot appropriately in `rotate_and_find_object()`.
 2. Vertical and horizontal offset determination: The horizontal offset was calculated by simply using the lidar, by telling the robot to stop at a fixed distance in front of the object (0.18 m). The vertical offset was a bit more complicated. We calculated this value with the `calculate_vertical_offset()` function by calculating the pixel offset between the center of the can and the center of the image, by combining this with our knowledge of the horizontal distance (using LIDAR) and taking the angle from the center using the cameras vertical FOV, we were able to consistantly get accurate readings for our vertical offset (z-value)
 3. Calculating the appropriate angles: This was done using the `calculate_angles()` function, we directly adapted the equations we learned about in class for a 2 DOF joint system
-4. Converting from the robots coordinate system to ours: Before using the angles in `pick_up()`, we convert them from the real world coordinate system to the robots coordinate system by multiplying angle1 by -1 and subtracting 90 degrees (pi/2) from angle2. 
+4. Converting from the robots coordinate system to ours: Before using the angles in `pick_up()`, we convert them from the real world coordinate system to the robots coordinate system by multiplying angle1 by -1 and subtracting 90 degrees (pi/2) from angle2.
+
+### Computer Vision 
+Devloping the codea allows the robot to reconfinize the gesture which then corespsonds to the following can. 
+
+1. To traint his model we used the following data set which can be found here https://www.kaggle.com/datasets/gti-upm/leapgestrecog/ and other image sthat where taken on the turtlebots sub optimal camera.
+2. From there to improve accurncy we included the mediapipe frame work to detect the points of the hand and overlay the cordiantes on the existing data set. This allowed us to have a higher accuracy with the bad camera that is on turtle bot.
+3. Once these are aded the image is compressed into 150 by 150 and pushed into the model for 100 epochs wirh batcdh sizes of 256.
+4. Upon completing training we save this model to be lodaded onto the bot.
+
+# Model on the robot 
+
+1. 
 
 ## ROS Node Diagram:
 <img width="744" alt="Screenshot 2023-12-04 at 9 20 43 PM" src="https://github.com/Intro-Robotics-UChicago-Fall-2023/final_project_jayden_eddie_jason_danny/assets/102828818/c4869901-b814-46f5-9335-31e91b4459b5">
