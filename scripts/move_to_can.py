@@ -343,7 +343,7 @@ class FindAndPickupCan:
             # Get hand landmark prediction
             result = self.hands.process(framergb)
             vel_msg = Twist()
-            vel_msg.angular.z = 0.2
+            vel_msg.angular.z = 0.3
             self.vel_pub.publish(vel_msg)
             rate.sleep()
             result = self.hands.process(framergb)
