@@ -111,7 +111,20 @@ This was also a great project to really allow us to discover how to effectively 
 As a final thought, we would like to sincerely thank the teaching staff of intro to robotics, we all had an amazing time in this class and learned more than we would have thought possible in a 10 week quarter, we are very greatful for your help and guidance.
 
 
+
+
+
+
+
+
+
+
+
 [below is our project overview from the Project Proposal, which we kept for posterity]
+
+
+
+
 
 
 
