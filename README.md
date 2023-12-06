@@ -69,19 +69,56 @@ In order for our script to run correctly, you MUST execute the command rosrun fi
 
 ## Challenges, Future Work, and Takeaways: These should take a similar form and structure to how you approached these in the previous projects (1 paragraph each for the challenges and future work and a few bullet points for takeaways)
 
+## Execution: Describe how to run your code, e.g., step-by-step instructions on what commands to run in each terminal window to execute your project code.
+In order to run our project can can clone this git repository and run the following commands, each in a different terminal window.
+
+Window 1: enter catkin_ws and run roscore
+Window 2: ssh into a turtlebot, connect it to your IP address and run bringup
+Window 3: ssh into the same turtlebot, connect it to your IP address, and run bringup_cam
+Window 4: to correctly compress images run: rosrun image_transport republish compressed in:=raspicam_node/image raw out:=camera/rgb/image_raw
+Window 5: run roslaunch turtlebot3_manipulation_bringup turtlebot3_manipulation_bringup.launch
+Window 6: run roslaunch turtlebot3_manipulation_moveit_config move_group.launch
+
+Finally, you are ready to run our program, our main node is located in the move_to_can.py file, however, this node requires access to the mp_hand_gesture directory which contains our machine learning model.
+
+In order for our script to run correctly, you MUST execute the command rosrun final_project move_to_can.py in the final_project_jayden_eddie_jason_danny directory in order to ensure that all the dependencies are taken care of.
+
+## Challenges, Future Work, and Takeaways: These should take a similar form and structure to how you approached these in the previous projects (1 paragraph each for the challenges and future work and a few bullet points for takeaways)
+
 ### Challenges
 
-Developing a robotic system for beverage delivery, leveraging machine learning, gesture recognition, and inverse kinematics, encounters several notable challenges. A primary difficulty lies in harmonizing the software components—comprising machine learning models, gesture recognition algorithms, and inverse kinematics—with physical elements like robotic arms, sensors, and cameras. Ensuring that the physical hardware effectively executes sophisticated software algorithms is essential.
+This project was a testimate to our ability to adapt, develop, and incorperate all of the lessons and knowledge we attained over the course of this fantastic introduction to robotics. Our first challenge came with the development of our inverse kinematics algorithm. While adapting the equations we learned about in class to code was a simple task, we were far from a solution after our first iteration. We first had to accurately measure the vertical offset of the can (which we did using the size of the can in pixels, and a little more trig), and then we had to convert from the real world coordinate system to the coordinate system of the robot, which was something we only realized after hours of trying and failing to obtain a correct result.
 
-In particular, gesture and recognition posed significant obstacles. Despite achieving high accuracy in controlled settings, these models struggled to perform effectively in real-world environments. This discrepancy might be attributed to factors like inadequate camera resolution. Moreover, converting theoretical arm angles into practical, real-world movements added layers of complexity, presenting further challenges in applying inverse kinematics to the robot's arm. These issues underscore the intricate task of translating advanced computational models into reliable, physical robotic actions.
+The machine learning component also had significant challenges associated with it. Despite achieving high accuracy in controlled settings, the model struggled to perform effectively in real-world environments. This discrepancy might be attributed to factors like inadequate camera resolution, but it required us to retrain the model with some of our own pictures from the robot camera to achieve a more accurate model.
+
+Finally, connecting all of the pieces was a challenge in itself, ensuring that everything ran smoothly, and the edge cases with color recognition and arm positions, and state management was all handled appropriately so we could be confident in our demo took many additional hours of debugging and testing our framework.
 
 ### Future Work
 
-Future work for the Happy Hydrators includes several avenues that we can explore to enhance the system's performance and utility. The first is to improve the sensor integration. Upgrading the camera or integrating additional sensors could enhance the system's ability to perceive and interact with its environment accurately. This may include using higher-resolution cameras, depth sensors, or LIDAR to improve object recognition and spatial awareness.
-The second is a robust ML Algorithm. Refining the ML algorithms to handle real-world variability better and training the system with a more diverse data set can increase its accuracy and reliability in different lighting conditions and environments. The current design struggles with different lighting conditions. We suspect this may be due to camera quality. The third is to Enhance the Mechanical Design of the robotic arm. Improving the robotic arm's design for more precise and stable movements can help in accurately picking and placing objects, especially in varied and dynamic home environments. The current design may overshoot or undershoot the beverage can.
+Future work for the Happy Hydrators includes several avenues that we could explore to enhance the system's performance and utility. The first is to improve the sensor integration. Upgrading the camera or integrating additional sensors could enhance the system's ability to perceive and interact with its environment accurately. This may include using higher-resolution cameras, depth sensors, or LIDAR to improve object recognition and spatial awareness.
+
+We also would have liked to use a machine learning algorithm for the cans, in addition to the gestures. We did attempt to do this with a pretrained model that we found on roboflow, but we could not find anything that had a high enough accuracy for our purposes. Additionally, we tried training our own model, but because of the crushed nature of our cans, we were not able to find enough traning images to get an accurate model for our specific use cans with the 3 cans we had access too. We do believe this is something we could have done if we found clean training data (or had smaller cans, for instance).
+
 
 ### Takeaways
-In the takeaway from this project, we discovered a significant gap between our theoretical model and practical implementation, particularly concerning the performance of the machine learning (ML) and training models. While our ML models showed impressive accuracy in controlled environments—achieving 98% accuracy in recognizing hand gestures and 91% in identifying cans—these results did not translate seamlessly into real-world applications with the TurtleBot's camera system. The robot became finicky and often failed to function as expected in practical scenarios. This discrepancy highlighted a crucial disconnect between the code we developed and its integration with the physical machine. It was a valuable lesson in the complexities of translating theoretical accuracy into real-world reliability, emphasizing the need for more robust testing and calibration in diverse, real-life conditions.
+
+This was a fantastic project to wrap up what has been an extremely enjoyable and informative quarter for all of us. We were able to successfully incorperate new robotics algorithms (ML/gesture recognition, inverse kinematics), and build upon our existing knowledge about robotics that we have developed throughout the quarter (color recognition, proportional control, state management, etc). 
+
+In the end, we are all extremely happy not only with what we created, but also with the process that allowed us to develop our final project this quarter. Learning about important robotics concepts and algorithms and then having the freedom to explore, to fail, and to suffer through a freeform robotics project has made us all better programmers, thinkers, and communicators. We beleive this format helped to develop our own understanding a ton and (speaking personally) my excitement about robotics has only risen despite all the hours of debugging and testing this quarter required.
+
+This was also a great project to really allow us to discover how to effectively work as a team, and divvying up work appropriately is a takeaway I can see being invaluable in professional as well as academic settings.
+
+As a final thought, we would like to sincerely thank the teaching staff of intro to robotics, we all had an amazing time in this class and learned more than we would have thought possible in a 10 week quarter, we are very greatful for your help and guidance.
+
+
+[below is our project overview from the Project Proposal, which we kept for posterity]
+
+
+
+
+
+
+
 
 
 ## Motivation (2-3 sentences): Why is your team interested in pursuing this project?
