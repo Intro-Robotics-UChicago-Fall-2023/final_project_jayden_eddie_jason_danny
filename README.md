@@ -23,8 +23,8 @@ The following steps involved in developing the code to allow the robot to recogn
 3. Calculating the appropriate angles: This was done using the `calculate_angles()` function; we directly adapted the equations we learned about in class for a 2 DOF joint system
 4. Converting from the robot coordinate system to ours: Before using the angles in `pick_up(),` we convert them from the real-world coordinate system to the robot coordinate system by multiplying angle1 by -1 and subtracting 90 degrees (pi/2) from angle2.
 
-### Computer Vision / Machine Learning
-The development of this code enables a robot to recognize specific gestures, which are then linked to predefined actions. The training of this model utilized a dataset available at Kaggle, supplemented with images captured by the suboptimal camera of the TurtleBot.
+### Computer Vision + Machine Learning
+The development of this section of the code code enables the robot to recognize specific gestures, which are then linked to predefined actions (getting a specific can). The training of this model utilized a dataset available at Kaggle, supplemented with images captured by the suboptimal camera of the TurtleBot.
 
 The MediaPipe framework was integrated to enhance accuracy. This framework detects hand landmarks and overlays these coordinates onto the existing dataset. This approach significantly improved accuracy, particularly with the lower-quality camera on the TurtleBot.
 
@@ -34,14 +34,29 @@ The images were resized to 150x150 pixels and fed into the neural network model.
 
 1. Initially, we initialize the model and load the associated class names when the system boots up.
 2. Following this, we start preprocessing images to align them with the characteristics of the data used in training the model.
-3. In this step, we implement structural detection in the images, convert them to black and white, and then input them into the model.
+3. We implement structural detection in the images, convert them to black and white, and then input them into the model.
 4. The model subsequently generates confidence percentages for each class. We select the class with the highest confidence percentage, convert its identifier to an integer, and return this integer corresponding to the identified class.
-5. 
+
+The machine learning model can be found in the `train.py` file in the scripts folder.
+
+
 ## ROS Node Diagram:
 <img width="744" alt="Screenshot 2023-12-04 at 9 20 43 PM" src="https://github.com/Intro-Robotics-UChicago-Fall-2023/final_project_jayden_eddie_jason_danny/assets/102828818/c4869901-b814-46f5-9335-31e91b4459b5">
 
 
 ## Execution: Describe how to run your code, e.g., step-by-step instructions on what commands to run in each terminal window to execute your project code.
+In order to run our project can can clone this git repository and run the following commands, each in a different terminal window.
+
+Window 1: enter catkin_ws and run roscore
+Window 2: ssh into a turtlebot, connect it to your IP address and run bringup
+Window 3: ssh into the same turtlebot, connect it to your IP address, and run bringup_cam
+Window 4: to correctly compress images run: rosrun image_transport republish compressed in:=raspicam_node/image raw out:=camera/rgb/image_raw
+Window 5: run roslaunch turtlebot3_manipulation_bringup turtlebot3_manipulation_bringup.launch
+Window 6: run roslaunch turtlebot3_manipulation_moveit_config move_group.launch
+
+Finally, you are ready to run our program, our main node is located in the move_to_can.py file, however, this node requires access to the mp_hand_gesture directory which contains our machine learning model.
+
+In order for our script to run correctly, you MUST execute the command rosrun final_project move_to_can.py in the final_project_jayden_eddie_jason_danny directory in order to ensure that all the dependencies are taken care of.
 
 ## Challenges, Future Work, and Takeaways: These should take a similar form and structure to how you approached these in the previous projects (1 paragraph each for the challenges and future work and a few bullet points for takeaways)
 
