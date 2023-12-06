@@ -6,6 +6,10 @@
 # Members
 ## Danny Lingen, Jason Starbuck, Eddy Tay, and Jayden Francis
 
+## Video
+
+[![Happy Hydrators!](https://github.com/Intro-Robotics-UChicago-Fall-2023/final_project_jayden_eddie_jason_danny/blob/main/DALL%C2%B7E%202023-11-25%2015.07.47%20-%20A%20highly%20detailed%20image%20of%20a%20futuristic%20two-wheeled%20robot%20with%20a%20polished%20metallic%20body%2C%20positioned%20in%20a%20well-equipped%20computer%20science%20laboratory.%20Th.jpeg)](https://youtu.be/DOVHarTF_Fo)
+
 ## Project Description: 
 Our team is passionate about enhancing the convenience and efficiency of daily tasks, and we understand the widespread desire for easy access to favorite beverages without disrupting leisure time. To address this, we are excited to develop an innovative robotic solution designed to bring drinks directly to you while you relax on your couch. This solution harnesses the power of Gesture Recognition, Machine Learning (ML), and Inverse Kinematics (along wih other robotics concepts that we developed and practiced throughout the quarter). Inverse Kinematics enables the robot's arm to reach and grab beverages from any (reachable) height, ensuring adaptability to different scenarios. Gesture Recognition is incorporated to allow users to indicate their beverage choice and signal where they want it delivered (along with where the target for delivery is). Additionally, ML is employed to equip the robot with the ability to discern various hand gestures in order to allow transitions and targets between states. We aim to create a seamless, user-friendly experience that integrates advanced technology into the comfort of your home.
 
