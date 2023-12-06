@@ -7,7 +7,7 @@
 ## Danny Lingen, Jason Starbuck, Eddy Tay, and Jayden Francis
 
 ## Project Description: 
-Our team is passionate about enhancing the convenience and efficiency of daily tasks, and we understand the widespread desire for easy access to favorite beverages without disrupting leisure time. To address this, we are excited to develop an innovative robotic solution designed to bring drinks directly to you while you relax on your couch. This solution harnesses the power of Gesture Recognition, Machine Learning (ML)/Training Data Sets, and Inverse Kinematics. Inverse Kinematics enables the robot's arm to reach and grab beverages from any height, ensuring adaptability to different scenarios. Gesture Recognition is incorporated to allow users to indicate their beverage choice and signal where they want it delivered. Additionally, ML and Training Sets are employed to equip the robot with the ability to discern various hand gestures and recognize different beverage types. We aim to create a seamless, user-friendly experience that integrates advanced technology into the comfort of your home.
+Our team is passionate about enhancing the convenience and efficiency of daily tasks, and we understand the widespread desire for easy access to favorite beverages without disrupting leisure time. To address this, we are excited to develop an innovative robotic solution designed to bring drinks directly to you while you relax on your couch. This solution harnesses the power of Gesture Recognition, Machine Learning (ML), and Inverse Kinematics (along wih other robotics concepts that we developed and practiced throughout the quarter). Inverse Kinematics enables the robot's arm to reach and grab beverages from any (reachable) height, ensuring adaptability to different scenarios. Gesture Recognition is incorporated to allow users to indicate their beverage choice and signal where they want it delivered (along with where the target for delivery is). Additionally, ML is employed to equip the robot with the ability to discern various hand gestures in order to allow transitions and targets between states. We aim to create a seamless, user-friendly experience that integrates advanced technology into the comfort of your home.
 
 ## System Architecture: 
 
@@ -29,6 +29,11 @@ The development of this section of the code code enables the robot to recognize 
 The MediaPipe framework was integrated to enhance accuracy. This framework detects hand landmarks and overlays these coordinates onto the existing dataset. This approach significantly improved accuracy, particularly with the lower-quality camera on the TurtleBot.
 
 The images were resized to 150x150 pixels and fed into the neural network model. The model was trained over 100 epochs with batch sizes of 256. Following the completion of training, the model was saved for deployment on the robot.
+
+After the model was developed, we incorperated it into our node with the `process_frames()` function which is called before our robot enters the sequence to pick up and retrieve a can. This function determines which can the robot will target after a gesture is detected for 5 seconds. It also provides a helpful output to the viewing window which allows us to see the gesture our robot is "seeing".
+
+We also incorperate our machine learning model in the `move_to_gesture()` function, which finds the center of a hand detected via the ML model and uses proportional control to move towards the hand so it can drop it off and complete its action.
+
 
 #### Model on the robot 
 
