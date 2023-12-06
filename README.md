@@ -23,7 +23,7 @@ The following steps involved in developing the code to allow the robot to recogn
 3. Calculating the appropriate angles: This was done using the `calculate_angles()` function; we directly adapted the equations we learned about in class for a 2 DOF joint system
 4. Converting from the robot coordinate system to ours: Before using the angles in `pick_up(),` we convert them from the real-world coordinate system to the robot coordinate system by multiplying angle1 by -1 and subtracting 90 degrees (pi/2) from angle2.
 
-### Computer Vision 
+### Computer Vision / Machine Learning
 The development of this code enables a robot to recognize specific gestures, which are then linked to predefined actions. The training of this model utilized a dataset available at Kaggle, supplemented with images captured by the suboptimal camera of the TurtleBot.
 
 The MediaPipe framework was integrated to enhance accuracy. This framework detects hand landmarks and overlays these coordinates onto the existing dataset. This approach significantly improved accuracy, particularly with the lower-quality camera on the TurtleBot.
