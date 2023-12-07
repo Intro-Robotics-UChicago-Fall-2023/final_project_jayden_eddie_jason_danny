@@ -120,12 +120,11 @@ class FindAndPickupCan:
                             cv2.rectangle(self.image, (x, y), (x+w, y+h), (0, 255, 0), 2)
                             self.area = w * h
                             
-                            # Calculate the Z value (vertical distance from the camera to the can)
                             KNOWN_CAN_HEIGHT = 0.12
                             CAMERA_VERTICAL_FOV = math.radians(48.8) 
                             
                             if not self.z and self.distance_in_front < 0.5 and self.area > 150:# Calculate Z using the height of the can in the image
-                               
+                               # we are close enough to calculate the vertical offset
                                 self.z = self.calculate_vertical_offset(y + h // 2, self.image_height, CAMERA_VERTICAL_FOV, self.distance_in_front)
                                 self.z = self.z - self.z * 0.4
                                 print("z = ", self.z)
@@ -138,6 +137,7 @@ class FindAndPickupCan:
             self.new_image_flag = True
 
     def process_frames(self):
+    """ used to process the frames and identify the hand / gestures"""
         first_detection = False
         first_detection_time = None
         while self.image is not None:
@@ -201,7 +201,7 @@ class FindAndPickupCan:
         cv2.destroyAllWindows()
 
     def calculate_angles(self, x, z):
-        """ calculates the angles q1 and q1 given x (lidar) and z (from vertical offset)"""
+        """ calculates the angles q1 and q1 given x (lidar) and z (from vertical offset), adapted from inclass equations"""
         print("calculating with x:", x, "z: ", z)
         r = math.sqrt(x**2 + z**2)
 
@@ -228,7 +228,6 @@ class FindAndPickupCan:
 
         # Calculate the vertical offset using the angle and the distance to the can
         vertical_offset = distance_to_can * math.tan(angle_from_center)
-        # multiply by -1 to convert to robot coord system
         return -1 * vertical_offset
 
     def rotate_and_find_object(self):
@@ -386,6 +385,8 @@ class FindAndPickupCan:
 
 
     def look_for_tag(self, target_id):
+    """ If we want the robot to move to a tag rather than a gesture we have that functionality
+    in this function, not currently being used in final version"""
         rate = rospy.Rate(5)
         if self.ids is not None:
             ids_flattened = self.ids.flatten()
@@ -425,6 +426,7 @@ class FindAndPickupCan:
             self.vel_pub.publish(Twist())
 
     def drop_can_end_sequence(self):
+        """ put can down and reset"""
         self.move_group_arm.go([0, 0.739, -0.69, -0.64], wait=True)
         rospy.sleep(1)
         gripper_joint_open = [0.01, 0.01]
@@ -439,6 +441,7 @@ class FindAndPickupCan:
             rospy.sleep(5)
 
     def execute_action(self):
+        """ state management"""
         rospy.loginfo("looking for can")
         rospy.sleep(5)
         self.rotate_and_find_object()
@@ -473,8 +476,9 @@ class FindAndPickupCan:
 if __name__ == '__main__':
     rospy.init_node('pick_up_object')
 
-    # pickup_putdown.run()
+    
     while not rospy.is_shutdown():
+        # first find gesture then execute action
         pickup_putdown = FindAndPickupCan()
         a = pickup_putdown.process_frames()
         print(a)
